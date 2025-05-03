@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Webhook Receiver - Anonre</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f4f4f4;
+            --text-primary: #111111;
+            --text-secondary: #666666;
+            --accent: #000000;
+            --success: #2d2d2d;
+            --error: #4a4a4a;
+            --border: #e0e0e0;
+            --card-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            --hover-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        [data-theme="dark"] {
+            --bg-primary: #111111;
+            --bg-secondary: #1a1a1a;
+            --text-primary: #ffffff;
+            --text-secondary: #999999;
+            --accent: #ffffff;
+            --success: #cccccc;
+            --error: #8a8a8a;
+            --border: #333333;
+            --card-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+            --hover-shadow: 0 8px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            transition: all 0.3s ease;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        header {
+            position: relative;
+            margin-bottom: 4rem;
+            padding: 3rem 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            letter-spacing: -1px;
+            margin-bottom: 0.5rem;
+        }
+
+        .header-subtitle {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            max-width: 600px;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: var(--bg-secondary);
+            border-radius: 20px;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        .user-info i {
+            color: var(--accent);
+        }
+
+        .theme-toggle {
+            background: none;
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.2rem;
+            transition: transform 0.3s ease;
+        }
+
+        .theme-toggle:hover {
+            transform: rotate(45deg);
+        }
+
+        .logout-btn {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .logout-btn:hover {
+            background: var(--accent);
+            color: var(--bg-primary);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .stat-card {
+            background: var(--bg-secondary);
+            padding: 2rem;
+            border-radius: 12px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: var(--accent);
+            transform: scaleX(0);
+            transform-origin: left;
+            transition: transform 0.3s ease;
+        }
+
+        .stat-card:hover::before {
+            transform: scaleX(1);
+        }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin: 1rem 0;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .webhook-url-container {
+            flex: 1;
+            position: relative;
+            min-width: 300px;
+        }
+
+        .webhook-url {
+            width: 100%;
+            padding: 1rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-family: 'Fira Code', monospace;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            padding-right: 120px;
+        }
+
+        .copy-btn {
+            position: absolute;
+            right: 5px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: var(--accent);
+            color: var(--bg-primary);
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .copy-btn:hover {
+            opacity: 0.9;
+        }
+
+        .btn {
+            padding: 1rem 2rem;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: var(--bg-primary);
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--hover-shadow);
+        }
+
+        .search-container {
+            margin-bottom: 2rem;
+            position: relative;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 1rem;
+            padding-left: 3rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            font-size: 1rem;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-secondary);
+        }
+
+        .webhooks-container {
+            display: grid;
+            gap: 1.5rem;
+        }
+
+        .webhook-card {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 1.5rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .webhook-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--hover-shadow);
+        }
+
+        .webhook-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .method-badge {
+            padding: 0.3rem 0.8rem;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            letter-spacing: 0.5px;
+        }
+
+        .method-POST { background: var(--success); color: var(--bg-primary); }
+        .method-GET { background: var(--accent); color: var(--bg-primary); }
+        .method-PUT { background: var(--text-secondary); color: var(--bg-primary); }
+        .method-DELETE { background: var(--error); color: var(--bg-primary); }
+
+        .webhook-path {
+            font-family: 'Fira Code', monospace;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .webhook-timestamp {
+            margin-left: auto;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .webhook-data {
+            background: var(--bg-primary);
+            padding: 1.5rem;
+            border-radius: 8px;
+            overflow-x: auto;
+        }
+
+        .webhook-data pre {
+            margin: 0;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.9rem;
+            color: var(--text-primary);
+        }
+
+        .headers-collapse {
+            margin-top: 1rem;
+        }
+
+        .headers-collapse summary {
+            cursor: pointer;
+            color: var(--text-secondary);
+            font-weight: 500;
+            user-select: none;
+        }
+
+        .headers-collapse summary:hover {
+            color: var(--text-primary);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: var(--text-secondary);
+        }
+
+        .empty-state i {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .notification {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            padding: 1rem 2rem;
+            border-radius: 8px;
+            background: var(--accent);
+            color: var(--bg-primary);
+            font-weight: 500;
+            box-shadow: var(--card-shadow);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            z-index: 1000;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        .loading-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: var(--accent);
+            color: var(--bg-primary);
+            border-radius: 20px;
+            font-size: 0.9rem;
+            position: fixed;
+            bottom: 2rem;
+            left: 2rem;
+        }
+
+        .loading-indicator::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            background: var(--bg-primary);
+            border-radius: 50%;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(0.8); opacity: 0.5; }
+            50% { transform: scale(1.2); opacity: 1; }
+            100% { transform: scale(0.8); opacity: 0.5; }
+        }
+
+        @media (max-width: 768px) {
+            .container { padding: 1rem; }
+            .header-content { flex-direction: column; text-align: center; gap: 1.5rem; }
+            .header-actions { justify-content: center; }
+            .controls { flex-direction: column; }
+            .webhook-url-container { min-width: 100%; }
+            .stat-card { padding: 1.5rem; }
+            .webhook-header { flex-direction: column; align-items: flex-start; }
+            .webhook-timestamp { margin-left: 0; margin-top: 0.5rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="header-content">
+                <div>
+                    <h1>Webhook Monitor v1</h1>
+                    <p class="header-subtitle">Real-time webhook monitoring and debugging interface with advanced filtering and analytics.</p><bold>Created By <a href="https://github.com/joelindra">Joel Indra</a></bold>
+                </div>
+                <div class="header-actions">
+                    <div class="user-info">
+                        <i class="fas fa-user-circle"></i>
+                        <span>{{ session.username }}</span>
+                    </div>
+                    <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
+                        <i class="fas fa-moon"></i>
+                    </button>
+                    <a href="/logout" class="logout-btn">
+                        <i class="fas fa-sign-out-alt"></i>
+                        Logout
+                    </a>
+                </div>
+            </div>
+        </header>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <span class="stat-label">Total Webhooks</span>
+                <div class="stat-value" id="total-webhooks">0</div>
+                <i class="fas fa-webhook" style="color: var(--text-secondary);"></i>
+            </div>
+            <div class="stat-card">
+                <span class="stat-label">Success Rate</span>
+                <div class="stat-value" id="success-rate">0%</div>
+                <i class="fas fa-chart-line" style="color: var(--text-secondary);"></i>
+            </div>
+            <div class="stat-card">
+                <span class="stat-label">Last Received</span>
+                <div class="stat-value" id="last-received" style="font-size: 1.5rem;">-</div>
+                <i class="fas fa-clock" style="color: var(--text-secondary);"></i>
+            </div>
+        </div>
+
+        <div class="controls">
+            <div class="webhook-url-container">
+                <input type="text" id="webhook-url" class="webhook-url" readonly>
+                <button id="copy-btn" class="copy-btn">
+                    <i class="fas fa-copy"></i> Copy
+                </button>
+            </div>
+            <button onclick="clearHistory()" class="btn btn-outline">
+                <i class="fas fa-trash"></i> Clear History
+            </button>
+            <button onclick="toggleAutoRefresh()" class="btn btn-primary" id="refresh-button">
+                <i class="fas fa-sync"></i> Enable Auto Refresh
+            </button>
+        </div>
+
+        <div class="search-container">
+            <i class="fas fa-search search-icon"></i>
+            <input type="text" id="search-input" class="search-input" 
+                   placeholder="Search webhooks by content, headers, or method...">
+        </div>
+
+        <div id="webhooks-container" class="webhooks-container">
+            <!-- Webhooks will be populated here -->
+        </div>
+    </div>
+
+    <script>
+        let autoRefreshInterval;
+        let isAutoRefreshEnabled = false;
+        let isDarkMode = false;
+        let webhooksData = [];
+
+        // Initialize theme from localStorage and set up the webhook URL
+        document.addEventListener('DOMContentLoaded', () => {
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme === 'dark') {
+                toggleTheme();
+            }
+            
+            // Get the current domain/IP and set the webhook URL
+            updateWebhookUrl();
+            
+            // Set up copy button event listener
+            document.getElementById('copy-btn').addEventListener('click', copyWebhookUrl);
+            
+            refreshWebhooks();
+        });
+
+        // Function to update the webhook URL based on the current domain
+        function updateWebhookUrl() {
+            const protocol = window.location.protocol; // http: or https:
+            const hostname = window.location.hostname; // domain or IP
+            const port = window.location.port ? `:${window.location.port}` : '';
+            const webhookPath = '/webhook';
+            
+            const fullWebhookUrl = `${protocol}//${hostname}${port}${webhookPath}`;
+            document.getElementById('webhook-url').value = fullWebhookUrl;
+        }
+
+        function toggleTheme() {
+            isDarkMode = !isDarkMode;
+            document.documentElement.setAttribute('data-theme', isDarkMode ? 'dark' : 'light');
+            const icon = document.querySelector('.theme-toggle i');
+            icon.className = isDarkMode ? 'fas fa-sun' : 'fas fa-moon';
+            localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
+        }
+
+        function showNotification(message, type = 'success') {
+            const existing = document.querySelector('.notification');
+            if (existing) existing.remove();
+
+            const notification = document.createElement('div');
+            notification.className = 'notification';
+            notification.innerHTML = `
+                <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i>
+                ${message}
+            `;
+
+            document.body.appendChild(notification);
+            setTimeout(() => {
+                notification.style.opacity = '0';
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
+
+        function copyWebhookUrl() {
+            const webhookUrl = document.getElementById('webhook-url').value;
+            
+            // Modern approach using Clipboard API
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(webhookUrl)
+                    .then(() => showNotification('URL copied to clipboard'))
+                    .catch(() => {
+                        // Fallback for clipboard API failure
+                        fallbackCopyTextToClipboard(webhookUrl);
+                    });
+            } else {
+                // Fallback for browsers that don't support Clipboard API
+                fallbackCopyTextToClipboard(webhookUrl);
+            }
+        }
+        
+        // Fallback copy method for older browsers
+        function fallbackCopyTextToClipboard(text) {
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            
+            // Make the textarea out of viewport
+            textArea.style.position = 'fixed';
+            textArea.style.top = '0';
+            textArea.style.left = '0';
+            textArea.style.width = '2em';
+            textArea.style.height = '2em';
+            textArea.style.padding = '0';
+            textArea.style.border = 'none';
+            textArea.style.outline = 'none';
+            textArea.style.boxShadow = 'none';
+            textArea.style.background = 'transparent';
+            
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            
+            try {
+                const successful = document.execCommand('copy');
+                if (successful) {
+                    showNotification('URL copied to clipboard');
+                } else {
+                    showNotification('Failed to copy URL', 'error');
+                }
+            } catch (err) {
+                showNotification('Failed to copy URL', 'error');
+            }
+            
+            document.body.removeChild(textArea);
+        }
+
+        function updateStats() {
+            const total = webhooksData.length;
+            const successCount = webhooksData.filter(w => 
+                w.data?.status === 'success' || 
+                (w.headers && w.headers['X-Status'] === 'success')
+            ).length;
+            const successRate = total ? ((successCount / total) * 100).toFixed(1) : 0;
+            const lastReceived = webhooksData[0]?.timestamp || '-';
+
+            document.getElementById('total-webhooks').textContent = total;
+            document.getElementById('success-rate').textContent = `${successRate}%`;
+            document.getElementById('last-received').textContent = lastReceived;
+        }
+
+        function clearHistory() {
+            fetch('/clear', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        webhooksData = [];
+                        updateWebhooksDisplay();
+                        showNotification('History cleared');
+                        updateStats();
+                    }
+                })
+                .catch(error => showNotification('Error clearing history', 'error'));
+        }
+
+        function toggleAutoRefresh() {
+            const button = document.getElementById('refresh-button');
+            if (isAutoRefreshEnabled) {
+                clearInterval(autoRefreshInterval);
+                button.innerHTML = '<i class="fas fa-sync"></i> Enable Auto Refresh';
+                button.classList.remove('btn-outline');
+                button.classList.add('btn-primary');
+                isAutoRefreshEnabled = false;
+                showNotification('Auto refresh disabled');
+                
+                const indicator = document.querySelector('.loading-indicator');
+                if (indicator) indicator.remove();
+            } else {
+                autoRefreshInterval = setInterval(refreshWebhooks, 2000);
+                button.innerHTML = '<i class="fas fa-sync fa-spin"></i> Disable Auto Refresh';
+                button.classList.remove('btn-primary');
+                button.classList.add('btn-outline');
+                isAutoRefreshEnabled = true;
+                showNotification('Auto refresh enabled');
+                
+                const indicator = document.createElement('div');
+                indicator.className = 'loading-indicator';
+                indicator.textContent = 'Live';
+                document.body.appendChild(indicator);
+            }
+        }
+
+        function formatJSON(obj) {
+            return JSON.stringify(obj, null, 2)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+        }
+
+        function updateWebhooksDisplay(searchTerm = '') {
+            let filteredWebhooks = webhooksData;
+            if (searchTerm) {
+                const lowercaseSearch = searchTerm.toLowerCase();
+                filteredWebhooks = webhooksData.filter(webhook => {
+                    const webhookStr = JSON.stringify(webhook).toLowerCase();
+                    return webhookStr.includes(lowercaseSearch);
+                });
+            }
+
+            const container = document.getElementById('webhooks-container');
+            if (filteredWebhooks.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-inbox"></i>
+                        <h3>No webhooks received yet</h3>
+                        <p>Send a request to the webhook URL to see the data here</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = filteredWebhooks.map((webhook, index) => `
+                <div class="webhook-card">
+                    <div class="webhook-header">
+                        <span class="method-badge method-${webhook.method}">${webhook.method}</span>
+                        <span class="webhook-path">${webhook.path}</span>
+                        <span class="webhook-timestamp">
+                            <i class="far fa-clock"></i> ${webhook.timestamp}
+                        </span>
+                    </div>
+                    <div class="webhook-data">
+                        <pre><code>${formatJSON(webhook.data)}</code></pre>
+                    </div>
+                    <details class="headers-collapse">
+                        <summary>
+                            <i class="fas fa-chevron-right"></i> Headers
+                        </summary>
+                        <div class="webhook-data" style="margin-top: 1rem;">
+                            <pre><code>${formatJSON(webhook.headers)}</code></pre>
+                        </div>
+                    </details>
+                </div>
+            `).join('');
+        }
+
+        async function refreshWebhooks() {
+            try {
+                const response = await fetch('/get-webhooks');
+                webhooksData = await response.json();
+                updateWebhooksDisplay(document.getElementById('search-input').value);
+                updateStats();
+            } catch (error) {
+                console.error('Error refreshing webhooks:', error);
+            }
+        }
+
+        // Initialize search functionality
+        document.getElementById('search-input').addEventListener('input', (e) => {
+            updateWebhooksDisplay(e.target.value);
+        });
+    </script>
+</body>
+</html>
