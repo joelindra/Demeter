@@ -51,7 +51,7 @@ The application will be accessible at `http://localhost:5000`.
 
 ### Login
 
-Default login credentials:
+Default login credentials: [ adjustable ]
 - Username: `anonre`
 - Password: `hackerbiasa123`
 
