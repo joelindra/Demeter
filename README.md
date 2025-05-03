@@ -1,4 +1,4 @@
-# hook Collector
+# Hook Collector
 
 A simple but powerful Flask application for receiving, logging, and monitoring webhooks. Built for developers who need to debug and test webhook integrations.
 
