@@ -5,46 +5,47 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - Webhook Monitor</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@300;400;500;600;700;800&family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-primary: #0A0A0A; /* Near black */
-            --bg-secondary: #1A1A1A; /* Darker gray for container */
-            --text-primary: #E0E0E0; /* Light gray */
-            --text-secondary: #888888; /* Muted gray */
-            --accent: #00FFCC; /* Vibrant Teal/Cyan */
-            --border: #333333; /* Darker border */
-            --card-shadow: 0 8px 20px rgba(0, 255, 204, 0.15); /* More pronounced glow for login box */
-            --hover-shadow: 0 12px 25px rgba(0, 255, 204, 0.25); /* Even stronger hover glow */
-            --input-focus-glow: 0 0 10px rgba(0, 255, 204, 0.7); /* Stronger glow for inputs */
-            --error: #FF4444; /* Brighter error red */
+            --bg-primary: #0A0A0A;
+            --bg-secondary: #1A1A1A;
+            --text-primary: #E0E0E0;
+            --text-secondary: #888888;
+            --accent: #00FFCC;
+            --accent-gradient: linear-gradient(45deg, #00FFCC, #FF00FF);
+            --border: #333333;
+            --card-shadow: 0 8px 20px rgba(0, 255, 204, 0.2);
+            --hover-shadow: 0 12px 30px rgba(0, 255, 204, 0.3);
+            --input-focus-glow: 0 0 12px rgba(0, 255, 204, 0.8);
+            --error: #FF4444;
         }
 
-        /* Dark theme (default for this design) */
         [data-theme="dark"] {
             --bg-primary: #0A0A0A;
             --bg-secondary: #1A1A1A;
             --text-primary: #E0E0E0;
             --text-secondary: #888888;
             --accent: #00FFCC;
+            --accent-gradient: linear-gradient(45deg, #00FFCC, #FF00FF);
             --border: #333333;
-            --card-shadow: 0 8px 20px rgba(0, 255, 204, 0.15);
-            --hover-shadow: 0 12px 25px rgba(0, 255, 204, 0.25);
-            --input-focus-glow: 0 0 10px rgba(0, 255, 204, 0.7);
+            --card-shadow: 0 8px 20px rgba(0, 255, 204, 0.2);
+            --hover-shadow: 0 12px 30px rgba(0, 255, 204, 0.3);
+            --input-focus-glow: 0 0 12px rgba(0, 255, 204, 0.8);
             --error: #FF4444;
         }
 
-        /* Light theme - for completeness */
         [data-theme="light"] {
-            --bg-primary: #ffffff;
-            --bg-secondary: #f4f4f4;
+            --bg-primary: #F5F5F5;
+            --bg-secondary: #FFFFFF;
             --text-primary: #111111;
             --text-secondary: #666666;
             --accent: #000000;
+            --accent-gradient: linear-gradient(45deg, #000000, #444444);
             --border: #e0e0e0;
-            --card-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-            --hover-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
-            --input-focus-glow: 0 0 5px rgba(0, 0, 0, 0.2);
+            --card-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            --hover-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+            --input-focus-glow: 0 0 6px rgba(0, 0, 0, 0.3);
             --error: #ff4a4a;
         }
 
@@ -52,7 +53,7 @@
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            transition: all 0.3s ease; /* Smooth transitions for theme changes */
+            transition: all 0.3s ease;
         }
 
         body {
@@ -64,23 +65,41 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            position: relative; /* For theme toggle positioning */
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Matrix-like background animation */
+        #matrix-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -2;
+            background: var(--bg-primary);
         }
 
         .login-container {
             width: 100%;
-            max-width: 420px; /* Slightly wider */
-            padding: 3rem; /* More padding */
+            max-width: 460px;
+            padding: 3.5rem;
             background: var(--bg-secondary);
-            border-radius: 16px; /* More rounded corners */
-            border: 1px solid var(--border); /* Subtle border */
+            border-radius: 20px;
+            border: 2px solid transparent;
+            background-clip: padding-box;
             box-shadow: var(--card-shadow);
             position: relative;
             overflow: hidden;
-            z-index: 1; /* Ensure it's above background effects */
+            z-index: 1;
+            animation: glowBorder 2s infinite alternate;
         }
 
-        /* Background grid/dots effect for extra hacker feel */
+        @keyframes glowBorder {
+            0% { border-color: rgba(0, 255, 204, 0.3); }
+            100% { border-color: rgba(255, 0, 255, 0.3); }
+        }
+
         .login-container::before {
             content: '';
             position: absolute;
@@ -88,43 +107,53 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: 
-                radial-gradient(circle, var(--border) 1px, transparent 1px) 0 0 / 20px 20px,
-                radial-gradient(circle, var(--border) 1px, transparent 1px) 10px 10px / 20px 20px;
-            opacity: 0.05; /* Very subtle */
+            background: radial-gradient(circle, var(--border) 1px, transparent 1px) 0 0 / 25px 25px;
+            opacity: 0.08;
             z-index: -1;
         }
 
-
         .login-header {
             text-align: center;
-            margin-bottom: 2.5rem; /* More space */
+            margin-bottom: 3rem;
         }
 
         h1 {
-            font-size: 2.5rem; /* Larger title */
-            font-weight: 800;
-            letter-spacing: -1.5px; /* Tighter letter spacing */
-            margin-bottom: 0.75rem;
-            color: var(--accent); /* Accent color for title */
-            text-shadow: 0 0 8px rgba(0, 255, 204, 0.5); /* Glow effect */
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2.8rem;
+            font-weight: 700;
+            letter-spacing: -1px;
+            margin-bottom: 0.8rem;
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 10px rgba(0, 255, 204, 0.6);
         }
 
         .login-subtitle {
             color: var(--text-secondary);
-            font-size: 1.1rem; /* Slightly larger */
+            font-size: 1.2rem;
+            font-weight: 400;
+            opacity: 0.9;
+            transform: translateY(10px);
+            animation: fadeIn 1s ease forwards;
+        }
+
+        @keyframes fadeIn {
+            to { transform: translateY(0); opacity: 1; }
         }
 
         .form-group {
-            margin-bottom: 1.8rem; /* More space between form groups */
+            margin-bottom: 2rem;
         }
 
         .form-group label {
             display: block;
-            margin-bottom: 0.6rem; /* More space below label */
-            font-weight: 500;
+            margin-bottom: 0.7rem;
+            font-weight: 600;
             color: var(--text-primary);
-            font-size: 0.95rem;
+            font-size: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
 
         .input-with-icon {
@@ -133,150 +162,194 @@
 
         .input-with-icon i {
             position: absolute;
-            left: 1rem;
+            left: 1.2rem;
             top: 50%;
             transform: translateY(-50%);
             color: var(--text-secondary);
-            font-size: 1.1rem; /* Slightly larger icon */
-            pointer-events: none; /* Make icon not interfere with input click */
+            font-size: 1.2rem;
+            transition: color 0.3s ease;
         }
 
         .form-control {
             width: 100%;
-            padding: 1rem;
-            padding-left: 3.5rem; /* Room for larger icon */
+            padding: 1.2rem 1.2rem 1.2rem 3.8rem;
             border: 1px solid var(--border);
-            border-radius: 8px;
+            border-radius: 10px;
             background: var(--bg-primary);
             color: var(--text-primary);
-            font-size: 1rem;
-            box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.3); /* Inner shadow for depth */
-            font-family: 'Fira Code', monospace; /* Monospaced font for inputs */
+            font-size: 1.1rem;
+            box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.4);
+            font-family: 'Fira Code', monospace;
         }
 
         .form-control:focus {
             outline: none;
-            border-color: var(--accent);
-            box-shadow: var(--input-focus-glow); /* Accent glow on focus */
+            border-color: transparent;
+            background: var(--accent-gradient);
+            -webkit-background-clip: padding-box;
+            box-shadow: var(--input-focus-glow);
+            color: var(--bg-primary);
+        }
+
+        .form-control:focus + i {
+            color: var(--bg-primary);
         }
 
         .btn {
             width: 100%;
-            padding: 1.2rem; /* Larger button */
+            padding: 1.3rem;
             border: none;
-            border-radius: 8px;
-            font-weight: 600;
+            border-radius: 10px;
+            font-weight: 700;
+            font-family: 'Orbitron', sans-serif;
             cursor: pointer;
-            font-size: 1.1rem; /* Larger text */
-            transition: all 0.3s ease;
-            background: var(--accent);
+            font-size: 1.2rem;
+            background: var(--accent-gradient);
             color: var(--bg-primary);
-            box-shadow: 0 4px 15px rgba(0, 255, 204, 0.3); /* Initial button glow */
+            box-shadow: 0 4px 20px rgba(0, 255, 204, 0.4);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .btn:hover::before {
+            left: 100%;
         }
 
         .btn:hover {
-            transform: translateY(-3px) scale(1.01); /* More pronounced lift */
-            box-shadow: var(--hover-shadow); /* Stronger glow on hover */
+            transform: translateY(-4px) scale(1.02);
+            box-shadow: var(--hover-shadow);
         }
 
         .theme-toggle {
             position: absolute;
-            top: 2rem; /* Adjusted for consistency */
-            right: 2rem; /* Adjusted for consistency */
-            background: var(--bg-secondary); /* Match other elements */
+            top: 1.5rem;
+            right: 1.5rem;
+            background: var(--bg-secondary);
             border: 1px solid var(--border);
             color: var(--text-primary);
-            width: 48px; /* Larger toggle */
-            height: 48px; /* Larger toggle */
+            width: 50px;
+            height: 50px;
             border-radius: 50%;
             cursor: pointer;
-            font-size: 1.2rem; /* Larger icon */
-            transition: transform 0.3s ease, background 0.3s ease, border-color 0.3s ease;
+            font-size: 1.3rem;
             display: flex;
             justify-content: center;
             align-items: center;
-            z-index: 10; /* Ensure it's on top */
+            z-index: 10;
+            transition: transform 0.4s ease, background 0.3s ease, border-color 0.3s ease;
         }
 
         .theme-toggle:hover {
-            transform: rotate(45deg) scale(1.05);
+            transform: rotate(360deg);
             border-color: var(--accent);
-            box-shadow: 0 0 10px rgba(0, 255, 204, 0.5); /* Accent glow */
+            box-shadow: 0 0 12px rgba(0, 255, 204, 0.6);
         }
 
         .error-message {
-            background-color: var(--error);
+            background: var(--error);
             color: white;
-            padding: 0.85rem; /* Slightly more padding */
-            border-radius: 8px;
-            margin-bottom: 2rem; /* More space below error message */
-            font-size: 0.95rem;
+            padding: 1rem;
+            border-radius: 10px;
+            margin-bottom: 2rem;
+            font-size: 1rem;
             text-align: center;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 0.5rem;
+            gap: 0.6rem;
             font-weight: 500;
-            box-shadow: 0 0 10px rgba(255, 68, 68, 0.5); /* Error glow */
+            box-shadow: 0 0 12px rgba(255, 68, 68, 0.6);
+            animation: shake 0.3s ease;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
         }
 
         @media (max-width: 480px) {
             .login-container {
-                padding: 2rem;
-                max-width: 90%;
+                padding: 2.5rem;
+                max-width: 95%;
             }
             .theme-toggle {
                 top: 1rem;
                 right: 1rem;
-                width: 40px;
-                height: 40px;
+                width: 45px;
+                height: 45px;
+                font-size: 1.1rem;
+            }
+            h1 {
+                font-size: 2.2rem;
+            }
+            .login-subtitle {
                 font-size: 1rem;
             }
         }
     </style>
 </head>
 <body>
+    <canvas id="matrix-bg"></canvas>
     <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
         <i class="fas fa-moon"></i>
     </button>
 
     <div class="login-container">
         <div class="login-header">
-            <p class="login-subtitle">Access your real-time webhook stream.</p> </div>
+            <h1>Welcome, Hacker!</h1>
+            <p class="login-subtitle">Access your real-time webhook stream.</p>
+        </div>
 
         {% if error %}
         <div class="error-message">
-            <i class="fas fa-exclamation-triangle"></i> {{ error }} </div>
+            <i class="fas fa-exclamation-triangle"></i> {{ error }}
+        </div>
         {% endif %}
 
         <form action="/login" method="POST">
             <div class="form-group">
-                <label for="username">USERNAME</label> <div class="input-with-icon">
-                    <i class="fas fa-user-secret"></i> <input type="text" id="username" name="username" class="form-control" required autofocus>
+                <label for="username">USERNAME</label>
+                <div class="input-with-icon">
+                    <i class="fas fa-user-secret"></i>
+                    <input type="text" id="username" name="username" class="form-control" placeholder="Enter your hacker alias" required autofocus>
                 </div>
             </div>
 
             <div class="form-group">
-                <label for="password">PASSWORD</label> <div class="input-with-icon">
-                    <i class="fas fa-key"></i> <input type="password" id="password" name="password" class="form-control" required>
+                <label for="password">PASSWORD</label>
+                <div class="input-with-icon">
+                    <i class="fas fa-key"></i>
+                    <input type="password" id="password" name="password" class="form-control" placeholder="Your secret key" required>
                 </div>
             </div>
 
-            <button type="submit" class="btn">ACCESS PANEL</button> </form>
+            <button type="submit" class="btn">ENTER THE MATRIX</button>
+        </form>
+        <br>
+        <p style="text-align: center; font-size: 0.9rem;">
+            Find the key on <a href="https://pypi.org/user/Anonre/" style="color: var(--accent); text-decoration: none;">Joel Indra PyPI</a>
+        </p>
     </div>
 
     <script>
         // Initialize theme from localStorage
         document.addEventListener('DOMContentLoaded', () => {
-            const savedTheme = localStorage.getItem('theme');
-            // Default to dark mode for hacker aesthetic
-            if (savedTheme === 'light') { 
-                toggleTheme(); // This will switch it to light mode
-            } else {
-                // Ensure dark mode is applied if no theme is saved or if dark is saved
-                document.documentElement.setAttribute('data-theme', 'dark');
-                document.querySelector('.theme-toggle i').className = 'fas fa-sun';
-            }
+            const savedTheme = localStorage.getItem('theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+            document.querySelector('.theme-toggle i').className = savedTheme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
+            initMatrixBackground();
         });
 
         function toggleTheme() {
@@ -284,8 +357,43 @@
             const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
             document.documentElement.setAttribute('data-theme', newTheme);
             const icon = document.querySelector('.theme-toggle i');
-            icon.className = newTheme === 'dark' ? 'fas fa-sun' : 'fas fa-moon'; // Sun for dark, Moon for light
+            icon.className = newTheme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
             localStorage.setItem('theme', newTheme);
+        }
+
+        // Matrix background animation
+        function initMatrixBackground() {
+            const canvas = document.getElementById('matrix-bg');
+            const ctx = canvas.getContext('2d');
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+
+            const chars = '01';
+            const fontSize = 14;
+            const columns = canvas.width / fontSize;
+            const drops = Array(Math.floor(columns)).fill(1);
+
+            function draw() {
+                ctx.fillStyle = 'rgba(10, 10, 10, 0.05)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = '#00FFCC';
+                ctx.font = `${fontSize}px 'Fira Code'`;
+
+                for (let i = 0; i < drops.length; i++) {
+                    const text = chars.charAt(Math.floor(Math.random() * chars.length));
+                    ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+                    if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+                        drops[i] = 0;
+                    }
+                    drops[i]++;
+                }
+            }
+
+            setInterval(draw, 33);
+            window.addEventListener('resize', () => {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+            });
         }
     </script>
 </body>
