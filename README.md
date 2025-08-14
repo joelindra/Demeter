@@ -22,6 +22,8 @@ Demeter is a lightweight Flask-based tool designed to capture, store, and analyz
 - No additional external services required
 
 ## Installation
+**From Source**:
+
 1. Clone the repository:
    ```bash
    git clone https://github.com/yourusername/webhook-catcher.git
@@ -36,6 +38,12 @@ Demeter is a lightweight Flask-based tool designed to capture, store, and analyz
    python app.py
    ```
    The application will start on `http://0.0.0.0:13370`.
+
+**From PyPI**:
+1. PyPI Download:
+   ```bash
+   pip install demeter-cli
+   ```
 
 ## Usage
 1. **Access the Application**:
