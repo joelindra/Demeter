@@ -25,7 +25,7 @@ Demeter is a lightweight Flask-based tool designed to capture, store, and analyz
 1. Clone the repository:
    ```bash
    git clone https://github.com/yourusername/webhook-catcher.git
-   cd webhook-catcher
+   cd demeter
    ```
 2. Install dependencies:
    ```bash
@@ -44,7 +44,7 @@ Demeter is a lightweight Flask-based tool designed to capture, store, and analyz
      - **Username**: `anonre`
      - **Password**: `hackerbiasa123`
 2. **Webhook Endpoint**:
-   - Send webhooks to any path (e.g., `http://localhost:13370/your/webhook/path`).
+   - Send webhooks to any path (e.g., `http://localhost:13370`).
    - The application captures and stores the request details.
 3. **Dashboard**:
    - View recent webhooks, including method, path, headers, data, and IP address.
