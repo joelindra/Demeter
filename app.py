@@ -5,44 +5,35 @@ import hashlib
 import time
 import threading
 import sqlite3
-# Removed Flask-Limiter imports as requested
-# from flask_limiter import Limiter
-# from flask_limiter.util import get_remote_address
 import logging
 from logging.handlers import RotatingFileHandler
 import os
 import secrets
 from functools import wraps
 
-# --- Konfigurasi Awal ---
-# Membuat direktori logs jika belum ada
+# --- Initial Configuration ---
+# Create logs directory if it doesn't exist
 if not os.path.exists('logs'):
     os.makedirs('logs')
 
-# Konfigurasi logging
+# Configure logging
 logging.basicConfig(level=logging.INFO)
 handler = RotatingFileHandler('logs/webhook.log', maxBytes=10000000, backupCount=5)
 handler.setFormatter(logging.Formatter(
     '[%(asctime)s] %(levelname)s in %(module)s: %(message)s'
 ))
 
-# Inisialisasi Aplikasi Flask
+# Initialize Flask App
 app = Flask(__name__)
 app.logger.addHandler(handler)
 
-# Kunci rahasia untuk session management yang aman
+# Secure secret key for session management
 app.secret_key = secrets.token_hex(16)
 
-# Removed Flask-Limiter initialization as requested
-# limiter = Limiter(
-#     app=app,
-#     key_func=get_remote_address,
-#     default_limits=["200 per day", "50 per hour"]
-# )
 
 # --- Database ---
 def init_db():
-    """Inisialisasi database SQLite dan tabel yang diperlukan."""
+    """Initializes the SQLite database and necessary tables."""
     with sqlite3.connect('webhooks.db') as conn:
         conn.execute('''
             CREATE TABLE IF NOT EXISTS webhooks
@@ -62,7 +53,7 @@ def init_db():
                 'INSERT INTO users (username, password, created_at) VALUES (?, ?, ?)',
                 ('anonre', password_hash, datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
             )
-        conn.commit() # Ensure changes are saved
+        conn.commit()
 
 init_db()
 
@@ -71,7 +62,7 @@ webhook_cache = []
 MAX_CACHE_SIZE = 50
 
 def load_initial_cache():
-    """Memuat riwayat webhook terakhir dari database ke dalam cache saat aplikasi dimulai."""
+    """Loads the last webhooks from the database into the cache on startup."""
     global webhook_cache
     try:
         with sqlite3.connect('webhooks.db') as conn:
@@ -85,26 +76,13 @@ def load_initial_cache():
                 entry = dict(row)
                 try:
                     entry['headers'] = json.loads(entry['headers'])
+                except (json.JSONDecodeError, TypeError):
+                    entry['headers'] = {'raw_content': str(entry['headers'])}
+
+                try:
                     entry['data'] = json.loads(entry['data'])
                 except (json.JSONDecodeError, TypeError):
-                    app.logger.warning(f"Could not parse JSON for webhook ID {entry.get('id')}. Data might be raw string.")
-                    # Keep data as string if JSON parsing fails
-                    if isinstance(entry['data'], str):
-                        try:
-                            # Attempt to parse as a simple string if not JSON
-                            entry['data'] = entry['data'] 
-                        except Exception:
-                            entry['data'] = {'raw_content': entry['data']} # Fallback to dict
-                    else:
-                        entry['data'] = {'raw_content': str(entry['data'])} # Ensure it's storable
-                    
-                    if isinstance(entry['headers'], str):
-                        try:
-                            entry['headers'] = json.loads(entry['headers'])
-                        except json.JSONDecodeError:
-                            entry['headers'] = {'raw_headers': entry['headers']} # Fallback to dict
-                    else:
-                        entry['headers'] = {'raw_headers': str(entry['headers'])} # Ensure it's storable
+                    entry['data'] = {'raw_content': str(entry['data'])}
 
                 temp_cache.append(entry)
             
@@ -117,13 +95,13 @@ def load_initial_cache():
 load_initial_cache()
 
 def cleanup_old_records():
-    """Menghapus record webhook yang lebih tua dari 30 hari secara periodik."""
+    """Periodically deletes webhook records older than 30 days."""
     while True:
         time.sleep(86400) # Check every 24 hours
         try:
             with sqlite3.connect('webhooks.db') as conn:
                 conn.execute("DELETE FROM webhooks WHERE datetime(timestamp) < datetime('now', '-30 days')")
-                conn.commit() # Commit changes to the database
+                conn.commit()
                 app.logger.info("Successfully cleaned up old webhook records.")
         except Exception as e:
             app.logger.error(f"Error during database cleanup: {e}")
@@ -131,43 +109,40 @@ def cleanup_old_records():
 cleanup_thread = threading.Thread(target=cleanup_old_records, daemon=True)
 cleanup_thread.start()
 
-# --- Decorator & Fungsi Helper ---
+# --- Decorators & Helper Functions ---
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if 'logged_in' not in session:
-            flash('Anda harus login untuk mengakses halaman ini.', 'warning')
+            flash('You must be logged in to view this page.', 'warning')
             return redirect(url_for('login'))
         return f(*args, **kwargs)
     return decorated_function
 
 def generate_webhook_id(data):
-    # Use a combination of timestamp and a hash of the data for a unique ID
     content = f"{datetime.now().isoformat()}{str(data)}{secrets.token_hex(4)}"
     return hashlib.sha256(content.encode()).hexdigest()[:12]
 
 def process_and_store_webhook():
     try:
-        # Attempt to get JSON data, fallback to form data or raw data
+        data = {}
         if request.is_json:
-            data = request.get_json(silent=True) # silent=True returns None on parse error
-            if data is None: # If JSON parsing failed, try other methods
-                data = {
-                    'raw_data': request.get_data(as_text=True),
-                    'form_data': request.form.to_dict(),
-                    'args': request.args.to_dict()
-                }
-        else:
-            data = {
-                'raw_data': request.get_data(as_text=True),
-                'form_data': request.form.to_dict(),
-                'args': request.args.to_dict()
-            }
+            data = request.get_json(silent=True)
+            if data is None: 
+                data = {'raw_body': request.get_data(as_text=True)}
+        elif request.form:
+            data = request.form.to_dict()
+        elif request.get_data():
+            data = {'raw_body': request.get_data(as_text=True)}
         
+        if request.args:
+            if data:
+                data.setdefault('query_params', {}).update(request.args.to_dict())
+            else:
+                data = request.args.to_dict()
+
         webhook_id = generate_webhook_id(data)
         timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        
-        # Ensure headers are a dict, not ImmutableMultiDict
         headers_dict = dict(request.headers)
 
         webhook_entry = {
@@ -178,10 +153,9 @@ def process_and_store_webhook():
             'headers': headers_dict, 
             'data': data,
             'ip_address': request.remote_addr, 
-            'status': 'success' # Default status
+            'status': 'success'
         }
         
-        # Check for a status in headers or data (e.g., for analytics)
         if 'X-Status' in headers_dict:
             webhook_entry['status'] = headers_dict['X-Status']
         elif isinstance(data, dict) and 'status' in data:
@@ -195,21 +169,25 @@ def process_and_store_webhook():
                  json.dumps(webhook_entry['headers']), json.dumps(webhook_entry['data']),
                  request.remote_addr, webhook_entry['status'])
             )
-            conn.commit() # Commit changes to the database
+            conn.commit()
 
-        # Add to cache (newest first)
         webhook_cache.insert(0, webhook_entry)
         if len(webhook_cache) > MAX_CACHE_SIZE:
-            webhook_cache.pop() # Remove oldest if cache exceeds size
+            webhook_cache.pop()
         
-        app.logger.info(f'Webhook received: {webhook_id} from {request.remote_addr} on path {request.path} (Method: {request.method})')
+        app.logger.info(f'Webhook received: {webhook_id} from {request.remote_addr} on path {request.path}')
         return jsonify({'status': 'success', 'message': 'Webhook received', 'webhook_id': webhook_id})
     except Exception as e:
-        error_id = hashlib.sha256(str(time.time()).encode()).hexdigest()[:8]
-        app.logger.error(f'Error processing webhook {error_id}: {e}', exc_info=True) # Log full traceback
-        return jsonify({'status': 'error', 'message': f'Internal Server Error: {e}', 'error_id': error_id}), 500
+        error_id = secrets.token_hex(4)
+        app.logger.error(f'Error processing webhook {error_id}: {e}', exc_info=True)
+        return jsonify({'status': 'error', 'message': f'Internal Server Error', 'error_id': error_id}), 500
 
-# --- Rute Aplikasi ---
+# --- Application Routes (Specific routes first) ---
+@app.route('/')
+def index_redirect():
+    """Redirects the root URL ('/') to the login page."""
+    return redirect(url_for('login'))
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if 'logged_in' in session:
@@ -219,106 +197,96 @@ def login():
         username = request.form.get('username')
         password = request.form.get('password')
         if not username or not password:
-            error = 'Username dan password harus diisi.'
+            error = 'Username and password are required.'
         else:
             with sqlite3.connect('webhooks.db') as conn:
                 password_hash = hashlib.sha256(password.encode()).hexdigest()
-                user = conn.execute('SELECT * FROM users WHERE username = ? AND password = ?', (username, password_hash)).fetchone()
+                cursor = conn.cursor()
+                cursor.execute('SELECT * FROM users WHERE username = ? AND password = ?', (username, password_hash))
+                user = cursor.fetchone()
                 if user:
                     session['logged_in'] = True
                     session['username'] = username
                     app.logger.info(f'User {username} logged in successfully.')
                     return redirect(url_for('dashboard'))
                 else:
-                    error = 'Username atau password salah.'
+                    error = 'Invalid username or password.'
     return render_template('login.html', error=error)
 
 @app.route('/logout')
 @login_required
 def logout():
     session.clear()
-    flash('Anda telah berhasil logout.', 'success')
+    flash('You have been successfully logged out.', 'success')
     return redirect(url_for('login'))
 
 @app.route('/dashboard')
 @login_required
 def dashboard():
-    # Cukup render template. JavaScript akan menangani pengambilan data.
     return render_template('index.html')
 
-# --- Rute Penampung Webhook ---
-@app.route('/', defaults={'path': ''}, methods=['GET', 'POST']) # Hanya GET dan POST
-@app.route('/<path:path>', methods=['GET', 'POST']) # Hanya GET dan POST
-# Removed @limiter.limit as requested
-def catch_all_webhooks(path):
-    # Ignore automatic browser requests for favicon.ico
-    if path == 'favicon.ico':
-        return '', 204  # 204 No Content
-
-    # All GET and POST requests will now be processed and stored as webhooks.
-    # The previous condition to ignore GET requests for logging has been removed.
-    return process_and_store_webhook()
-
-# --- API Endpoints (disesuaikan dengan frontend baru) ---
-
+# --- API Endpoints ---
 @app.route('/get-webhooks')
 @login_required
-# Removed @limiter.limit as requested
 def get_webhooks():
-    """API untuk mendapatkan data webhook yang dipanggil oleh JavaScript."""
+    """API to get webhook data called by JavaScript."""
     return jsonify(webhook_cache)
 
 @app.route('/clear', methods=['POST'])
 @login_required
 def clear_history():
-    """API untuk membersihkan riwayat yang dipanggil oleh JavaScript."""
+    """API to clear history called by JavaScript."""
     try:
         webhook_cache.clear()
         with sqlite3.connect('webhooks.db') as conn:
             conn.execute('DELETE FROM webhooks')
-            conn.commit() # Commit changes to the database
+            conn.commit()
         app.logger.info(f"Webhook history cleared by user {session.get('username')}.")
         return jsonify({'status': 'success', 'message': 'History cleared'})
     except Exception as e:
-        app.logger.error(f'Error clearing history: {e}', exc_info=True) # Log full traceback
+        app.logger.error(f'Error clearing history: {e}', exc_info=True)
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
-# Endpoint stats ini tidak lagi digunakan oleh frontend baru, tapi kita biarkan saja.
 @app.route('/api/stats')
 @login_required
 def get_stats():
-    """API untuk mendapatkan statistik webhook."""
+    """API to get webhook statistics."""
     try:
         with sqlite3.connect('webhooks.db') as conn:
-            conn.row_factory = sqlite3.Row # Ensure rows are dict-like
+            conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
             total = cursor.execute('SELECT COUNT(*) FROM webhooks').fetchone()[0]
-            methods_raw = cursor.execute('SELECT method, COUNT(*) FROM webhooks GROUP BY method').fetchall()
-            methods = {row['method']: row['COUNT(*)'] for row in methods_raw} # Convert to dict
+            methods_raw = cursor.execute('SELECT method, COUNT(*) as count FROM webhooks GROUP BY method').fetchall()
+            methods = {row['method']: row['count'] for row in methods_raw}
             
-            cursor.execute("SELECT COUNT(*), SUM(CASE WHEN status = 'success' THEN 1 ELSE 0 END) FROM webhooks")
-            total_count, success_count = cursor.fetchone()
+            status_counts_raw = cursor.execute("SELECT status, COUNT(*) as count FROM webhooks GROUP BY status").fetchall()
+            status_counts = {row['status']: row['count'] for row in status_counts_raw}
             
-            success_rate = (success_count / total_count * 100) if total_count > 0 and success_count is not None else 0
-            return jsonify({'total_webhooks': total, 'methods': methods, 'success_rate': round(success_rate, 2)})
+            return jsonify({
+                'total_webhooks': total, 
+                'methods': methods, 
+                'status_counts': status_counts
+            })
     except Exception as e:
-        app.logger.error(f'Error getting stats: {e}', exc_info=True) # Log full traceback
+        app.logger.error(f'Error getting stats: {e}', exc_info=True)
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
-# Removed @app.errorhandler(429) as rate limiting is removed
-# @app.errorhandler(429)
-# def ratelimit_handler(e):
-#     return jsonify({'status': 'error', 'message': 'Rate limit exceeded', 'details': str(e.description)}), 429
+# --- Webhook Catcher Route (MUST BE LAST) ---
+# This "catch-all" route handles any path not matched by the specific routes above.
+@app.route('/<path:path>', methods=['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'])
+def catch_all_webhooks(path):
+    if path == 'favicon.ico':
+        return '', 204
+    return process_and_store_webhook()
 
+
+# --- Error Handlers ---
 @app.errorhandler(404)
 def page_not_found(e):
-    # Jika ada yang mencoba mengakses rute API yang salah, arahkan ke dashboard.
-    if request.path.startswith('/api/'):
-        app.logger.warning(f"API Endpoint not found: {request.path}")
-        return jsonify({'status': 'error', 'message': 'Endpoint not found. Check your API routes.'}), 404
-    app.logger.info(f"Redirecting 404 for path: {request.path} to dashboard.")
-    return redirect(url_for('dashboard'))
+    # For a non-existent page, render a proper 404 page.
+    app.logger.warning(f"404 Not Found for path: {request.path}")
+    # Note: You need to create a '404.html' file in your templates/ folder.
+    return render_template('404.html'), 404
 
 if __name__ == '__main__':
-    # Pastikan Anda menjalankan di port yang tidak terpakai, misal 5001 jika 5000 sibuk.
     app.run(debug=True, port=13370, host='0.0.0.0')
