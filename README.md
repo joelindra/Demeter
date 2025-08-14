@@ -44,7 +44,11 @@ Demeter is a lightweight Flask-based tool designed to capture, store, and analyz
    ```bash
    pip install demeter-cli
    ```
-
+2. Run:
+   ```bash
+   demeter
+   ```
+   
 ## Usage
 1. **Access the Application**:
    - Open your browser and navigate to `http://localhost:13370`.
