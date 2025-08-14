@@ -64,7 +64,7 @@ Demeter is a lightweight Flask-based tool designed to capture, store, and analyz
 
 ## Project Structure
 ```
-webhook-catcher/
+Demeter/
 ├── app.py              # Main Flask application
 ├── templates/          # HTML templates (index.html, login.html, 404.html)
 ├── logs/              # Log files (webhook.log)
