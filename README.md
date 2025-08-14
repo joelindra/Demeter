@@ -42,7 +42,7 @@ Demeter is a lightweight Flask-based tool designed to capture, store, and analyz
 **From PyPI**:
 1. PyPI Download:
    ```bash
-   pip install demeter-cli
+   pip install demeter-tod
    ```
 2. Run:
    ```bash
